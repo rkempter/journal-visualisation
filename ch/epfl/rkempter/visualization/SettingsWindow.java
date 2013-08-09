@@ -28,6 +28,8 @@ public class SettingsWindow extends javax.swing.JFrame {
     private Date max24hDate; //2008-10-31 10:04:00
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private int min24hTime = 0;
+    private int length = 0;
+    private int start = 0;
     
     /**
      * Creates new form SettingsWindow
@@ -36,8 +38,8 @@ public class SettingsWindow extends javax.swing.JFrame {
         
         // Parse dates
         try {
-            min24hDate = sdf.parse("2008-10-31 10:27:28");
-            max24hDate = sdf.parse("2009-04-28 16:28:02");
+            min24hDate = sdf.parse("2008-10-31 10:27:00");
+            max24hDate = sdf.parse("2009-04-28 16:29:00");
             
         } catch (ParseException ex) {
             Exceptions.printStackTrace(ex);
@@ -68,12 +70,15 @@ public class SettingsWindow extends javax.swing.JFrame {
         minHopsSpinner.setValue(2);
         maxHopsSpinner.setValue(5);
         
-        min24hTime = (int) (min24hDate.getTime() / 1000 / 60);
-        int max24hTime = (int) (max24hDate.getTime() / 1000 / 60);
+        min24hTime = (int) (min24hDate.getTime() / (1000 * 60));
+        int max24hTime = (int) (max24hDate.getTime() / (1000 * 60));
         
         startSlider.setMinimum(0);
+        startSlider.setValue(0);
         startSlider.setMaximum(max24hTime - min24hTime);
-        
+        endSlider.setMinimum(0);
+        endSlider.setValue(0);
+        endSlider.setMaximum(max24hTime - min24hTime);        
     }
 
     /**
@@ -99,6 +104,10 @@ public class SettingsWindow extends javax.swing.JFrame {
         estimationShowLabel = new javax.swing.JLabel();
         startSlider = new javax.swing.JSlider();
         startShowLabel = new javax.swing.JLabel();
+        jSeparator1 = new javax.swing.JSeparator();
+        jSeparator2 = new javax.swing.JSeparator();
+        endSlider = new javax.swing.JSlider();
+        endShowLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -143,85 +152,103 @@ public class SettingsWindow extends javax.swing.JFrame {
 
         org.openide.awt.Mnemonics.setLocalizedText(startShowLabel, org.openide.util.NbBundle.getMessage(SettingsWindow.class, "SettingsWindow.startShowLabel.text")); // NOI18N
 
+        endSlider.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                endSliderStateChanged(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(endShowLabel, org.openide.util.NbBundle.getMessage(SettingsWindow.class, "SettingsWindow.endShowLabel.text")); // NOI18N
+
         org.jdesktop.layout.GroupLayout layout = new org.jdesktop.layout.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(layout.createSequentialGroup()
-                .addContainerGap()
-                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.CENTER)
-                    .add(generateVideoButton)
-                    .add(titleLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                .add(35, 35, 35)
+                .add(titleLabel, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .add(27, 27, 27))
             .add(layout.createSequentialGroup()
-                .add(43, 43, 43)
                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                     .add(layout.createSequentialGroup()
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                        .add(35, 35, 35)
+                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                            .add(layout.createSequentialGroup()
+                                .add(estimationTextLabel)
+                                .add(45, 45, 45)
+                                .add(estimationShowLabel)
+                                .add(66, 66, 66)
+                                .add(generateVideoButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 214, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                            .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.CENTER)
+                                .add(org.jdesktop.layout.GroupLayout.TRAILING, jSeparator2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 560, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                                .add(jSeparator1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 560, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))))
+                    .add(layout.createSequentialGroup()
+                        .add(76, 76, 76)
+                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
                             .add(newspaperLabel)
+                            .add(startLabel)
+                            .add(endLabel)
                             .add(minHopsLabel)
-                            .add(maxHopsLabel)
-                            .add(startLabel))
+                            .add(maxHopsLabel))
                         .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
                             .add(layout.createSequentialGroup()
-                                .add(73, 73, 73)
+                                .add(40, 40, 40)
                                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                                    .add(layout.createSequentialGroup()
+                                        .add(14, 14, 14)
+                                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                                            .add(maxHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                                            .add(minHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
                                     .add(layout.createSequentialGroup()
                                         .add(startSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 276, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                                         .add(startShowLabel))
-                                    .add(minHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                                    .add(maxHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                                    .add(layout.createSequentialGroup()
+                                        .add(endSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 276, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                                        .add(endShowLabel))))
                             .add(layout.createSequentialGroup()
-                                .add(82, 82, 82)
-                                .add(newspaperComboBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
-                        .addContainerGap(127, Short.MAX_VALUE))
-                    .add(layout.createSequentialGroup()
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(layout.createSequentialGroup()
-                                .add(estimationTextLabel)
-                                .add(46, 46, 46)
-                                .add(estimationShowLabel))
-                            .add(endLabel))
-                        .add(0, 0, Short.MAX_VALUE))))
+                                .add(49, 49, 49)
+                                .add(newspaperComboBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))))
+                .addContainerGap(47, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(layout.createSequentialGroup()
                 .add(17, 17, 17)
                 .add(titleLabel)
-                .add(18, 18, 18)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(jSeparator1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(newspaperComboBox, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                     .add(newspaperLabel))
+                .add(18, 18, 18)
+                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(startLabel)
+                    .add(startShowLabel)
+                    .add(startSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                .add(17, 17, 17)
+                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+                    .add(endShowLabel)
+                    .add(endSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(endLabel))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                    .add(minHopsLabel)
+                    .add(minHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(layout.createSequentialGroup()
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(startLabel)
-                            .add(startShowLabel))
-                        .add(15, 15, 15)
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, layout.createSequentialGroup()
-                                .add(endLabel)
-                                .add(27, 27, 27)
-                                .add(minHopsLabel)
-                                .add(27, 27, 27)
-                                .add(maxHopsLabel))
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, layout.createSequentialGroup()
-                                .add(minHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
-                                .add(maxHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 51, Short.MAX_VALUE)
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                            .add(estimationTextLabel)
-                            .add(estimationShowLabel))
-                        .add(43, 43, 43)
-                        .add(generateVideoButton)
-                        .add(19, 19, 19))
-                    .add(layout.createSequentialGroup()
-                        .add(startSlider, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                    .add(org.jdesktop.layout.GroupLayout.TRAILING, maxHopsSpinner, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(org.jdesktop.layout.GroupLayout.TRAILING, maxHopsLabel))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .add(jSeparator2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 23, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(18, 18, 18)
+                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
+                    .add(generateVideoButton, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 42, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(estimationShowLabel)
+                    .add(estimationTextLabel))
+                .add(43, 43, 43))
         );
 
         pack();
@@ -230,7 +257,7 @@ public class SettingsWindow extends javax.swing.JFrame {
     private void generateVideoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_generateVideoButtonActionPerformed
         // generate video here
         
-        GephiFrameGeneration gephi = new GephiFrameGeneration(sdf.format(min24hDate), sdf.format(max24hDate));
+        GephiFrameGeneration gephi = new GephiFrameGeneration(sdf.format(min24hDate), sdf.format(max24hDate), length, start);
         gephi.start();
         
     }//GEN-LAST:event_generateVideoButtonActionPerformed
@@ -238,6 +265,7 @@ public class SettingsWindow extends javax.swing.JFrame {
     private void startSliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_startSliderStateChanged
         
         long minutes = startSlider.getValue();
+        System.out.println(minutes);
         
         Date newDate = new Date();
         min24hDate.setTime((min24hTime + minutes)*60*1000);
@@ -250,12 +278,22 @@ public class SettingsWindow extends javax.swing.JFrame {
     private void maxHopsSpinnerStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_maxHopsSpinnerStateChanged
         getDurationEstimation();
     }//GEN-LAST:event_maxHopsSpinnerStateChanged
+
+    private void endSliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_endSliderStateChanged
+        long minutes = endSlider.getValue();
+        
+        Date newDate = new Date();
+        max24hDate.setTime((min24hTime + minutes)*60*1000);
+        
+        endShowLabel.setText(sdf.format(max24hDate));
+        
+        getDurationEstimation();
+    }//GEN-LAST:event_endSliderStateChanged
     
     private void getDurationEstimation() {
         // datetime
         int minHopsCount = (Integer) minHopsSpinner.getValue();
         int maxHopsCount = (Integer) maxHopsSpinner.getValue();
-        int estimatedDuration = 0;
         
         Statement stmt = null;
         ResultSet rs = null;
@@ -263,11 +301,12 @@ public class SettingsWindow extends javax.swing.JFrame {
             try{
                 stmt = conn.createStatement();
 
-                String query = String.format("SELECT COUNT(*) as nbr FROM edges WHERE date >= '%s' AND date <= '%s'", sdf.format(min24hDate), sdf.format(max24hDate));
+                String query = String.format("SELECT COUNT(*) as nbr, MIN(start) as start FROM edges WHERE date >= '%s' AND date <= '%s'", sdf.format(min24hDate), sdf.format(max24hDate));
 
                 rs = stmt.executeQuery(query);
                 rs.first();
-                estimatedDuration = rs.getInt(1);
+                length = rs.getInt(1);
+                start = rs.getInt(2);
             } catch (SQLException ex) {
                 Exceptions.printStackTrace(ex);
             } finally {
@@ -291,7 +330,7 @@ public class SettingsWindow extends javax.swing.JFrame {
         }
         
         // Create an sql connection and do an estimation
-        estimationShowLabel.setText(estimatedDuration+" seconds");
+        estimationShowLabel.setText(length+" seconds");
     }
     
     /**
@@ -330,9 +369,13 @@ public class SettingsWindow extends javax.swing.JFrame {
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel endLabel;
+    private javax.swing.JLabel endShowLabel;
+    private javax.swing.JSlider endSlider;
     private javax.swing.JLabel estimationShowLabel;
     private javax.swing.JLabel estimationTextLabel;
     private javax.swing.JButton generateVideoButton;
+    private javax.swing.JSeparator jSeparator1;
+    private javax.swing.JSeparator jSeparator2;
     private javax.swing.JLabel maxHopsLabel;
     private javax.swing.JSpinner maxHopsSpinner;
     private javax.swing.JLabel minHopsLabel;

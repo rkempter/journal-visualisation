@@ -12,8 +12,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
 import java.util.Date;
 import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.data.attributes.api.AttributeController;
@@ -35,6 +33,7 @@ import org.gephi.io.importer.plugin.database.EdgeListDatabaseImpl;
 import org.gephi.io.importer.plugin.database.ImporterEdgeList;
 import org.gephi.io.processor.plugin.DefaultProcessor;
 import org.gephi.datalab.api.AttributeColumnsController;
+import org.gephi.dynamic.api.DynamicGraph;
 import org.gephi.filters.api.FilterController;
 import org.gephi.filters.api.Query;
 import org.gephi.filters.api.Range;
@@ -44,6 +43,9 @@ import org.gephi.filters.plugin.graph.DegreeRangeBuilder;
 import org.gephi.filters.spi.FilterBuilder;
 import org.gephi.graph.api.GraphView;
 import org.gephi.io.exporter.preview.PNGExporter;
+import org.gephi.layout.api.LayoutController;
+import org.gephi.layout.plugin.circularlayout.radialaxislayout.RadialAxisLayout;
+import org.gephi.plugins.layout.noverlap.NoverlapLayout;
 import org.gephi.partition.api.Partition;
 import org.gephi.partition.api.PartitionController;
 import org.gephi.partition.plugin.EdgeColorTransformer;
@@ -73,10 +75,14 @@ public class GephiFrameGeneration extends Thread {
     private String startDateTime = null;
     private String endDateTime = null;
     private File folder = null;
+    private int length;
+    private int start;
     
-    public GephiFrameGeneration(String start, String end) {
+    public GephiFrameGeneration(String start, String end, int length, int startTime) {
         startDateTime = start;
         endDateTime = end;
+        this.length = length;
+        this.start = startTime;
     }
     
     @Override
@@ -108,20 +114,48 @@ public class GephiFrameGeneration extends Thread {
         db.setPasswd("");
         db.setSQLDriver(new MySQLDriver());
         
-        db.setPort(3306);
-        db.setNodeQuery("SELECT \n" +
-"	news.id AS id, \n" +
-"	news.title AS label\n" +
-"FROM news\n"
-                + "LIMIT 4000");
+        String nodeQuery = String.format(
+                "SELECT DISTINCT \n" +
+                "   news.id AS id, \n"+
+                "   news.title AS label \n"+
+                "FROM news, edges \n"+
+                "WHERE "+
+                "   (news.id = edges.source OR \n"+
+                "   news.id = edges.target) AND \n"+
+                "   edges.date > '%s' AND\n"+
+                "   edges.date < '%s' ", startDateTime, endDateTime);
         
-        db.setEdgeQuery("SELECT \n" +
-"	edges.source AS source, \n" +
-"	edges.target AS target,\n" +
-"	edges.start AS starttime,\n" +
-"	edges.end AS endtime,\n" +
-"	edges.user AS user \n" +
-"FROM edges");
+        String edgeQuery = String.format(
+                "SELECT\n" +
+                "	edges.source AS source,\n" +
+                "	edges.target AS target,\n" +
+                "	edges.start AS starttime,\n" +
+                "	edges.end AS endtime,\n" +
+                "	edges.user AS user \n" +
+                "FROM\n" +
+                "	edges\n" +
+                "WHERE\n" +
+                "	edges.date > '%s' AND\n" +
+                "	edges.date < '%s'", startDateTime, endDateTime);
+        
+        System.out.println(nodeQuery);
+        System.out.println(edgeQuery);
+        db.setPort(3306);
+        db.setNodeQuery(nodeQuery);
+        db.setEdgeQuery(edgeQuery);
+        
+//                db.setNodeQuery("SELECT \n" +
+//"	news.id AS id, \n" +
+//"	news.title AS label\n" +
+//"FROM news LIMIT 4000");
+//        
+//        db.setEdgeQuery("SELECT \n" +
+//"	edges.source AS source, \n" +
+//"	edges.target AS target,\n" +
+//"	edges.start AS starttime,\n" +
+//"	edges.end AS endtime,\n" +
+//"	edges.user AS user \n" +
+//"FROM edges");
         
         ImporterEdgeList edgeListImporter = new ImporterEdgeList();
         Container container = importController.importDatabase(db, edgeListImporter);
@@ -159,6 +193,8 @@ public class GephiFrameGeneration extends Thread {
         EdgeColorTransformer edgeColorTransformer = new EdgeColorTransformer();
         edgeColorTransformer.randomizeColors(p);
         partitionController.transform(p, edgeColorTransformer);
+        
+        DynamicGraph dynamicGraph = dynamicModel.createDynamicGraph(graph);
 
         // Print status
         System.out.println("All node columns:");
@@ -197,7 +233,6 @@ public class GephiFrameGeneration extends Thread {
         exporter.setWidth(2496);
  
         // Create a new folder to store the images
-        double percentage = 0;
         Date date = new Date();
         folder = new File("images-"+date.getTime());
         folder.mkdir();
@@ -206,7 +241,7 @@ public class GephiFrameGeneration extends Thread {
         FilterController filterController = Lookup.getDefault().lookup(FilterController.class);
         DegreeRangeBuilder.DegreeRangeFilter degreeFilter = new DegreeRangeBuilder.DegreeRangeFilter();
         Query degreeQuery = filterController.createQuery(degreeFilter);
-        degreeFilter.setRange(new Range(1, 10));
+        degreeFilter.setRange(new Range(1, 2));
         
         //Create a dynamic range filter query
         FilterBuilder[] builders = Lookup.getDefault().lookup(DynamicRangeBuilder.class).getBuilders();
@@ -218,21 +253,47 @@ public class GephiFrameGeneration extends Thread {
         filterController.add(dynamicQuery);
         filterController.setSubQuery(degreeQuery, dynamicQuery);
         
-        long minTimeStamp = 0;
+        // Layout the data using the Circular Layout Plugin and Noverlap
+        RadialAxisLayout layout = new RadialAxisLayout(null, 200, false);
+        layout.setGraphModel(graphModel);
+        layout.resetPropertiesValues();
+        
+        NoverlapLayout noverlabLayout = new NoverlapLayout(null);
+        noverlabLayout.setGraphModel(graphModel);
+        noverlabLayout.setSpeed(3.0);
+        noverlabLayout.setMargin(5.0);
+        noverlabLayout.setRatio(1.5);
+        
+        
+        long minTimeStamp = start;
+        FileOutputStream stream = null;
+        int i = 0;
         // Run through timeline and export images
-        while(minTimeStamp < 10) {
-            FileOutputStream stream = null;
+        while(i < this.length) {
             try {
                 // Print progress
-                System.out.println("Percentage done: "+(Math.floor(percentage*100)/100)+"%");
+                System.out.println("Percentage done: "+(Math.floor(minTimeStamp*100)/length)+"%");
                 dynamicRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp+1));
                 GraphView view = filterController.filter(degreeQuery);
                 graphModel.setVisibleView(view);
-                stream = new FileOutputStream(folder.toString()+String.format("/image%03d.png", minTimeStamp));
+                stream = new FileOutputStream(folder.toString()+String.format("/image%04d.png", i));
+                
+                // Apply RadialAxisLayout
+                layout.initAlgo();
+                while(layout.canAlgo())
+                    layout.goAlgo();
+                layout.endAlgo();
+                
+                // Apply NoverlapLayout
+                noverlabLayout.initAlgo();
+                while(noverlabLayout.canAlgo())
+                    noverlabLayout.goAlgo();
+                noverlabLayout.endAlgo();
+                
                 minTimeStamp = minTimeStamp + 1;
+                i++;
                 exporter.setOutputStream(stream);
                 exporter.execute();
-                percentage += 0.01;
             } catch (FileNotFoundException ex) {
                 Exceptions.printStackTrace(ex);
             } finally {
@@ -246,10 +307,9 @@ public class GephiFrameGeneration extends Thread {
     }
     
     private void createMovie() {
- 
         String path = folder.getAbsolutePath().toString();
         
-        String[] cmdArgs = new String[] { "/usr/local/bin/ffmpeg", "-f", "image2", "-r", "2", "-i", path+"/image%03d.png", "-c:v", "libx264", "-r", "30", path+"/video.mp4" };
+        String[] cmdArgs = new String[] { "/usr/local/bin/ffmpeg", "-f", "image2", "-r", "1", "-i", path+"/image%04d.png", "-c:v", "libx264", "-r", "30", path+"/video.mp4" };
         
         try {
             Process p = Runtime.getRuntime().exec(cmdArgs);
