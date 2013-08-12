@@ -113,6 +113,7 @@ public class GephiFrameGeneration extends Thread {
         db.setUsername("root");
         db.setPasswd("");
         db.setSQLDriver(new MySQLDriver());
+        db.setPort(3306);
         
         String nodeQuery = String.format(
                 "SELECT DISTINCT \n" +
@@ -124,7 +125,7 @@ public class GephiFrameGeneration extends Thread {
                 "   news.id = edges.target) AND \n"+
                 "   edges.date > '%s' AND\n"+
                 "   edges.date < '%s' ", startDateTime, endDateTime);
-        
+//        
         String edgeQuery = String.format(
                 "SELECT\n" +
                 "	edges.source AS source,\n" +
@@ -137,25 +138,13 @@ public class GephiFrameGeneration extends Thread {
                 "WHERE\n" +
                 "	edges.date > '%s' AND\n" +
                 "	edges.date < '%s'", startDateTime, endDateTime);
-        
-        System.out.println(nodeQuery);
-        System.out.println(edgeQuery);
-        db.setPort(3306);
-        db.setNodeQuery(nodeQuery);
-        db.setEdgeQuery(edgeQuery);
-        
-//                db.setNodeQuery("SELECT \n" +
-//"	news.id AS id, \n" +
-//"	news.title AS label\n" +
-//"FROM news LIMIT 4000");
 //        
-//        db.setEdgeQuery("SELECT \n" +
-//"	edges.source AS source, \n" +
-//"	edges.target AS target,\n" +
-//"	edges.start AS starttime,\n" +
-//"	edges.end AS endtime,\n" +
-//"	edges.user AS user \n" +
-//"FROM edges");
+//        System.out.println(nodeQuery);
+//        System.out.println(edgeQuery);
+//        
+//        
+        db.setEdgeQuery(edgeQuery);
+        db.setNodeQuery(nodeQuery);
         
         ImporterEdgeList edgeListImporter = new ImporterEdgeList();
         Container container = importController.importDatabase(db, edgeListImporter);
@@ -217,12 +206,13 @@ public class GephiFrameGeneration extends Thread {
         //Preview configuration
         PreviewController previewController = Lookup.getDefault().lookup(PreviewController.class);
         PreviewModel previewModel = previewController.getModel();
-        previewModel.getProperties().putValue(PreviewProperty.SHOW_NODE_LABELS, Boolean.TRUE);
+        previewModel.getProperties().putValue(PreviewProperty.SHOW_NODE_LABELS, Boolean.FALSE);
         previewModel.getProperties().putValue(PreviewProperty.NODE_LABEL_COLOR, new DependantOriginalColor(Color.BLACK));
         previewModel.getProperties().putValue(PreviewProperty.EDGE_COLOR, new EdgeColor(Mode.ORIGINAL));
         previewModel.getProperties().putValue(PreviewProperty.EDGE_CURVED, Boolean.FALSE);
         previewModel.getProperties().putValue(PreviewProperty.EDGE_OPACITY, 100);
         previewModel.getProperties().putValue(PreviewProperty.EDGE_THICKNESS, 3);
+        previewModel.getProperties().putValue(PreviewProperty.EDGE_LABEL_SHORTEN, Boolean.TRUE);
         previewModel.getProperties().putValue(PreviewProperty.BACKGROUND_COLOR, Color.gray);
         
         // Load exporter
@@ -254,26 +244,26 @@ public class GephiFrameGeneration extends Thread {
         filterController.setSubQuery(degreeQuery, dynamicQuery);
         
         // Layout the data using the Circular Layout Plugin and Noverlap
-        RadialAxisLayout layout = new RadialAxisLayout(null, 200, false);
+        RadialAxisLayout layout = new RadialAxisLayout(null, 300, false);
         layout.setGraphModel(graphModel);
         layout.resetPropertiesValues();
         
         NoverlapLayout noverlabLayout = new NoverlapLayout(null);
         noverlabLayout.setGraphModel(graphModel);
         noverlabLayout.setSpeed(3.0);
-        noverlabLayout.setMargin(5.0);
+        noverlabLayout.setMargin(10.0);
         noverlabLayout.setRatio(1.5);
-        
+
         
         long minTimeStamp = start;
         FileOutputStream stream = null;
         int i = 0;
         // Run through timeline and export images
-        while(i < this.length) {
+        while(i < 10) {
             try {
                 // Print progress
                 System.out.println("Percentage done: "+(Math.floor(minTimeStamp*100)/length)+"%");
-                dynamicRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp+1));
+                dynamicRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp+6));
                 GraphView view = filterController.filter(degreeQuery);
                 graphModel.setVisibleView(view);
                 stream = new FileOutputStream(folder.toString()+String.format("/image%04d.png", i));
