@@ -6,7 +6,9 @@ package ch.epfl.rkempter.visualization;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -15,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Date;
+import javax.imageio.ImageIO;
 import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
@@ -62,7 +65,10 @@ import org.gephi.preview.types.EdgeColor.Mode;
 import org.gephi.preview.types.EdgeColor;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
+import org.gephi.preview.api.PreviewProperties;
 import org.gephi.preview.api.PreviewProperty;
+import org.gephi.preview.api.ProcessingTarget;
+import org.gephi.preview.api.RenderTarget;
 import org.gephi.preview.types.DependantOriginalColor;
 import org.gephi.project.api.ProjectController;
 import org.gephi.project.api.Workspace;
@@ -70,8 +76,12 @@ import org.gephi.ranking.api.Ranking;
 import org.gephi.ranking.api.RankingController;
 import org.gephi.ranking.api.Transformer;
 import org.gephi.ranking.plugin.transformer.AbstractSizeTransformer;
+import org.gephi.utils.longtask.spi.LongTask;
+import org.gephi.utils.progress.Progress;
+import org.gephi.utils.progress.ProgressTicket;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
+import processing.core.PGraphicsJava2D;
 
 /**
  *
@@ -80,6 +90,8 @@ import org.openide.util.Lookup;
 public class GephiFrameGeneration extends Thread {
     
     private static final int FRAMES_PER_SECOND = 2;
+    private static final int IMAGE_WIDTH = 1600;
+    private static final int IMAGE_HEIGHT = 1200;
     
     private String startDateTime = null;
     private String endDateTime = null;
@@ -271,11 +283,6 @@ public class GephiFrameGeneration extends Thread {
         filterController.setSubQuery(degreeQuery1, dynamicQuery);
         filterController.setSubQuery(degreeQuery2, dynamicGroupQuery);
         
-        Edge[] edges = graphModel.getGraph().getEdges().toArray();
-        for(Edge edge : edges) {
-            System.out.println("Edge: "+edge.getSource()+" to: "+edge.getTarget()+" with end: "+(Integer) edge.getEdgeData().getAttributes().getValue("endtime"));
-        }
-        
         // Layout the data using the Circular Layout Plugin and Noverlap
         RadialAxisLayout layout = new RadialAxisLayout(null, 300, false);
         layout.setGraphModel(graphModel);
@@ -298,12 +305,10 @@ public class GephiFrameGeneration extends Thread {
         
         long nextEnd = -1;
         
-        exportGEFX(ec, workspace);
-        
         // Filter graph according to
         GraphView view = null;
-        Dimension bigDimension = null;
-        Point topLeftPoint = null;
+        Dimension bigDimension = previewModel.getDimensions();
+        Point topLeftPoint = previewModel.getTopLeftPosition();
         
         // Run through timeline and export images
         while(i < 15) {
@@ -331,8 +336,8 @@ public class GephiFrameGeneration extends Thread {
                     
                     // Store Dimension and topLeftPoint.
                     bigDimension = previewModel.getDimensions();
+                    System.out.println("Dimensions: "+bigDimension);
                     topLeftPoint = previewModel.getTopLeftPosition();
-                    
                 }
                 
                 // how to find out length of interval
@@ -347,20 +352,19 @@ public class GephiFrameGeneration extends Thread {
                 // Set size
                 previewController.refreshPreview(workspace);
                 // Compute new topLeftPoint
-//                Dimension newDim = previewModel.getDimensions();
-//                int diffX = (dimension.width - newDim.width) / 2;
-//                int diffY = (dimension.height - newDim.height) / 2;
                 
-                System.out.println("Dimensions: "+previewModel.getDimensions().toString());
-                previewModel.setTopLeftPosition(new Point(300, 300));
-                
+                PreviewProperties props = previewModel.getProperties();
+                props.putValue("width", IMAGE_WIDTH);
+                props.putValue("height", IMAGE_HEIGHT);
+                ProcessingTarget target = (ProcessingTarget)previewController.getRenderTarget(RenderTarget.PROCESSING_TARGET);
                 
                 minTimeStamp = minTimeStamp + 1;
                 i++;
                 
-                exporter.setOutputStream(stream);
-                exporter.execute();
-                Thread.sleep(100);
+                exportPNG(target, stream, null);
+                
+//                exporter.setOutputStream(stream);
+//                exporter.execute();
                 System.out.println("TopLeftPosition: "+previewModel.getTopLeftPosition().toString());
             } catch (Exception ex) {
                 Exceptions.printStackTrace(ex);
@@ -372,6 +376,24 @@ public class GephiFrameGeneration extends Thread {
                 }
             }
         }   
+    }
+    
+    private void exportPNG(ProcessingTarget target, FileOutputStream stream, ProgressTicket progress) {
+        try {
+            
+            target.refresh();
+            
+            if (target instanceof LongTask) {
+                ((LongTask) target).setProgressTicket(progress);
+            }
+
+            PGraphicsJava2D pg2 = (PGraphicsJava2D) target.getGraphics();
+            BufferedImage img = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            img.setRGB(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, pg2.pixels, 0, IMAGE_WIDTH);
+            ImageIO.write(img, "png", stream);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     private void exportGEFX(ExportController ec, Workspace workspace) {
