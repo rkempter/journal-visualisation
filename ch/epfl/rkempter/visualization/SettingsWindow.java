@@ -31,6 +31,11 @@ public class SettingsWindow extends javax.swing.JFrame {
     private int length = 0;
     private int start = 0;
     
+    public static void main() {
+        SettingsWindow sw = new SettingsWindow();
+        sw.setVisible(true);
+    }
+    
     /**
      * Creates new form SettingsWindow
      */
