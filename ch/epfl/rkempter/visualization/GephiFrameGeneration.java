@@ -307,6 +307,7 @@ public class GephiFrameGeneration extends Thread {
         
         // Filter graph according to
         GraphView view = null;
+        previewController.refreshPreview();
         Dimension bigDimension = previewModel.getDimensions();
         Point topLeftPoint = previewModel.getTopLeftPosition();
         
@@ -325,7 +326,6 @@ public class GephiFrameGeneration extends Thread {
                     Thread.sleep(400);
                     
                     nextEnd = findNextEnd(graphModel);
-                    System.out.println("Next end: "+nextEnd+" minstamp: "+minTimeStamp);
                     
                     // Adjust filter
                     dynamicGroupRangeFilter.setRange(new Range(minTimeStamp, nextEnd));
@@ -335,6 +335,7 @@ public class GephiFrameGeneration extends Thread {
                     applyLayout(layout, noverlabLayout);
                     
                     // Store Dimension and topLeftPoint.
+                    previewController.refreshPreview();
                     bigDimension = previewModel.getDimensions();
                     System.out.println("Dimensions: "+bigDimension);
                     topLeftPoint = previewModel.getTopLeftPosition();
@@ -351,7 +352,9 @@ public class GephiFrameGeneration extends Thread {
                 stream = new FileOutputStream(folder.toString()+String.format("/image%04d.png", i));
                 // Set size
                 previewController.refreshPreview(workspace);
-                // Compute new topLeftPoint
+                // Set new 
+                previewModel.setDimensions(bigDimension);
+                previewModel.setTopLeftPosition(topLeftPoint);
                 
                 PreviewProperties props = previewModel.getProperties();
                 props.putValue("width", IMAGE_WIDTH);
@@ -365,7 +368,6 @@ public class GephiFrameGeneration extends Thread {
                 
 //                exporter.setOutputStream(stream);
 //                exporter.execute();
-                System.out.println("TopLeftPosition: "+previewModel.getTopLeftPosition().toString());
             } catch (Exception ex) {
                 Exceptions.printStackTrace(ex);
             } finally {
