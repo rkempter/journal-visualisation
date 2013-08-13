@@ -5,6 +5,8 @@
 package ch.epfl.rkempter.visualization;
 
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,15 +42,22 @@ import org.gephi.filters.api.Range;
 import org.gephi.filters.plugin.dynamic.DynamicRangeBuilder;
 import org.gephi.filters.plugin.dynamic.DynamicRangeBuilder.DynamicRangeFilter;
 import org.gephi.filters.plugin.graph.DegreeRangeBuilder;
+import org.gephi.filters.plugin.operator.INTERSECTIONBuilder;
 import org.gephi.filters.spi.FilterBuilder;
+import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.EdgeIterable;
+import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.Node;
 import org.gephi.io.exporter.preview.PNGExporter;
+import org.gephi.io.exporter.spi.GraphExporter;
 import org.gephi.layout.api.LayoutController;
 import org.gephi.layout.plugin.circularlayout.radialaxislayout.RadialAxisLayout;
 import org.gephi.plugins.layout.noverlap.NoverlapLayout;
 import org.gephi.partition.api.Partition;
 import org.gephi.partition.api.PartitionController;
 import org.gephi.partition.plugin.EdgeColorTransformer;
+import org.gephi.preview.PreviewModelImpl;
 import org.gephi.preview.types.EdgeColor.Mode;
 import org.gephi.preview.types.EdgeColor;
 import org.gephi.preview.api.PreviewController;
@@ -83,6 +92,7 @@ public class GephiFrameGeneration extends Thread {
         endDateTime = end;
         this.length = length;
         this.start = startTime;
+        System.out.println("Start is "+startTime);
     }
     
     @Override
@@ -139,19 +149,32 @@ public class GephiFrameGeneration extends Thread {
                 "	edges.date > '%s' AND\n" +
                 "	edges.date < '%s'", startDateTime, endDateTime);
 //        
-//        System.out.println(nodeQuery);
-//        System.out.println(edgeQuery);
+        System.out.println(nodeQuery);
+        System.out.println(edgeQuery);
 //        
+//      
 //        
         db.setEdgeQuery(edgeQuery);
         db.setNodeQuery(nodeQuery);
+//        
+//                db.setNodeQuery("SELECT \n" +
+//"	news.id AS id, \n" +
+//"	news.title AS label\n" +
+//"FROM news LIMIT 6000");
+        
+//        db.setEdgeQuery("SELECT \n" +
+//"	edges.source AS source, \n" +
+//"	edges.target AS target,\n" +
+//"	edges.start AS starttime,\n" +
+//"	edges.end AS endtime,\n" +
+//"	edges.user AS user \n" +
+//"FROM edges");
+        AttributeColumn edgesTimeIntervalColumn = acc.addAttributeColumn(attributeModel.getEdgeTable(), "Time Interval", AttributeType.TIME_INTERVAL);
         
         ImporterEdgeList edgeListImporter = new ImporterEdgeList();
         Container container = importController.importDatabase(db, edgeListImporter);
         container.setAllowAutoNode(false);      //Don't create missing nodes
         container.getLoader().setEdgeDefault(EdgeDefault.DIRECTED);   //Force DIRECTED
-        
-        AttributeColumn edgesTimeIntervalColumn = acc.addAttributeColumn(attributeModel.getEdgeTable(), "Time Interval", AttributeType.TIME_INTERVAL);
         
         //Append imported data to GraphAPI     
         importController.process(container, new DefaultProcessor(), workspace);
@@ -205,7 +228,7 @@ public class GephiFrameGeneration extends Thread {
         
         //Preview configuration
         PreviewController previewController = Lookup.getDefault().lookup(PreviewController.class);
-        PreviewModel previewModel = previewController.getModel();
+        PreviewModelImpl previewModel = (PreviewModelImpl) previewController.getModel();
         previewModel.getProperties().putValue(PreviewProperty.SHOW_NODE_LABELS, Boolean.FALSE);
         previewModel.getProperties().putValue(PreviewProperty.NODE_LABEL_COLOR, new DependantOriginalColor(Color.BLACK));
         previewModel.getProperties().putValue(PreviewProperty.EDGE_COLOR, new EdgeColor(Mode.ORIGINAL));
@@ -213,35 +236,45 @@ public class GephiFrameGeneration extends Thread {
         previewModel.getProperties().putValue(PreviewProperty.EDGE_OPACITY, 100);
         previewModel.getProperties().putValue(PreviewProperty.EDGE_THICKNESS, 3);
         previewModel.getProperties().putValue(PreviewProperty.EDGE_LABEL_SHORTEN, Boolean.TRUE);
-        previewModel.getProperties().putValue(PreviewProperty.BACKGROUND_COLOR, Color.gray);
+        previewModel.getProperties().putValue(PreviewProperty.BACKGROUND_COLOR, Color.gray);     
         
         // Load exporter
         ExportController ec = Lookup.getDefault().lookup(ExportController.class);
         PNGExporter exporter = (PNGExporter) ec.getExporter("png");     //Get GEXF exporter
         exporter.setWorkspace(workspace); 
-        exporter.setHeight(1404);
-        exporter.setWidth(2496);
+//        exporter.setHeight(1404);
+//        exporter.setWidth(2496);
  
         // Create a new folder to store the images
         Date date = new Date();
         folder = new File("images-"+date.getTime());
         folder.mkdir();
         
+        
         //Filter, remove degree < 10
         FilterController filterController = Lookup.getDefault().lookup(FilterController.class);
         DegreeRangeBuilder.DegreeRangeFilter degreeFilter = new DegreeRangeBuilder.DegreeRangeFilter();
-        Query degreeQuery = filterController.createQuery(degreeFilter);
-        degreeFilter.setRange(new Range(1, 2));
+        Query degreeQuery1 = filterController.createQuery(degreeFilter);
+        Query degreeQuery2 = filterController.createQuery(degreeFilter);
         
         //Create a dynamic range filter query
         FilterBuilder[] builders = Lookup.getDefault().lookup(DynamicRangeBuilder.class).getBuilders();
         DynamicRangeFilter dynamicRangeFilter = (DynamicRangeFilter) builders[0].getFilter();     //There is only one TIME_INTERVAL column, so it's always the [0] builder
+        DynamicRangeFilter dynamicGroupRangeFilter = (DynamicRangeFilter) builders[0].getFilter();
+        
+        Query dynamicGroupQuery = filterController.createQuery(dynamicGroupRangeFilter);
         Query dynamicQuery = filterController.createQuery(dynamicRangeFilter);
         
         //Set dynamic query as child of price query
-        filterController.add(degreeQuery);
-        filterController.add(dynamicQuery);
-        filterController.setSubQuery(degreeQuery, dynamicQuery);
+        filterController.add(degreeQuery1);
+        filterController.add(degreeQuery2);
+        filterController.setSubQuery(degreeQuery1, dynamicQuery);
+        filterController.setSubQuery(degreeQuery2, dynamicGroupQuery);
+        
+        Edge[] edges = graphModel.getGraph().getEdges().toArray();
+        for(Edge edge : edges) {
+            System.out.println("Edge: "+edge.getSource()+" to: "+edge.getTarget()+" with end: "+(Integer) edge.getEdgeData().getAttributes().getValue("endtime"));
+        }
         
         // Layout the data using the Circular Layout Plugin and Noverlap
         RadialAxisLayout layout = new RadialAxisLayout(null, 300, false);
@@ -254,37 +287,82 @@ public class GephiFrameGeneration extends Thread {
         noverlabLayout.setMargin(10.0);
         noverlabLayout.setRatio(1.5);
 
+        // Filter every
         
         long minTimeStamp = start;
         FileOutputStream stream = null;
         int i = 0;
+        
+        // how to find end time:
+        
+        
+        long nextEnd = -1;
+        
+        exportGEFX(ec, workspace);
+        
+        // Filter graph according to
+        GraphView view = null;
+        Dimension bigDimension = null;
+        Point topLeftPoint = null;
+        
         // Run through timeline and export images
-        while(i < 10) {
+        while(i < 15) {
+            // Filter everything that is 
+            
             try {
-                // Print progress
+                // If next user, compute new 
+                
+                if(minTimeStamp > nextEnd) {
+                    degreeFilter.setRange(new Range(1, 10));
+                    dynamicGroupRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp));
+                    GraphView view2 = filterController.filter(degreeQuery2);
+                    graphModel.setVisibleView(view2);
+                    Thread.sleep(400);
+                    
+                    nextEnd = findNextEnd(graphModel);
+                    System.out.println("Next end: "+nextEnd+" minstamp: "+minTimeStamp);
+                    
+                    // Adjust filter
+                    dynamicGroupRangeFilter.setRange(new Range(minTimeStamp, nextEnd));
+                    GraphView view3 = filterController.filter(degreeQuery2);
+                    graphModel.setVisibleView(view3);
+                    Thread.sleep(400);
+                    applyLayout(layout, noverlabLayout);
+                    
+                    // Store Dimension and topLeftPoint.
+                    bigDimension = previewModel.getDimensions();
+                    topLeftPoint = previewModel.getTopLeftPosition();
+                    
+                }
+                
+                // how to find out length of interval
                 System.out.println("Percentage done: "+(Math.floor(minTimeStamp*100)/length)+"%");
-                dynamicRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp+6));
-                GraphView view = filterController.filter(degreeQuery);
+                dynamicRangeFilter.setRange(new Range(minTimeStamp, minTimeStamp));
+                
+                view = filterController.filter(degreeQuery1);
                 graphModel.setVisibleView(view);
+                Thread.sleep(400);
+                
                 stream = new FileOutputStream(folder.toString()+String.format("/image%04d.png", i));
+                // Set size
+                previewController.refreshPreview(workspace);
+                // Compute new topLeftPoint
+//                Dimension newDim = previewModel.getDimensions();
+//                int diffX = (dimension.width - newDim.width) / 2;
+//                int diffY = (dimension.height - newDim.height) / 2;
                 
-                // Apply RadialAxisLayout
-                layout.initAlgo();
-                while(layout.canAlgo())
-                    layout.goAlgo();
-                layout.endAlgo();
+                System.out.println("Dimensions: "+previewModel.getDimensions().toString());
+                previewModel.setTopLeftPosition(new Point(300, 300));
                 
-                // Apply NoverlapLayout
-                noverlabLayout.initAlgo();
-                while(noverlabLayout.canAlgo())
-                    noverlabLayout.goAlgo();
-                noverlabLayout.endAlgo();
                 
                 minTimeStamp = minTimeStamp + 1;
                 i++;
+                
                 exporter.setOutputStream(stream);
                 exporter.execute();
-            } catch (FileNotFoundException ex) {
+                Thread.sleep(100);
+                System.out.println("TopLeftPosition: "+previewModel.getTopLeftPosition().toString());
+            } catch (Exception ex) {
                 Exceptions.printStackTrace(ex);
             } finally {
                 try {
@@ -294,6 +372,45 @@ public class GephiFrameGeneration extends Thread {
                 }
             }
         }   
+    }
+    
+    private void exportGEFX(ExportController ec, Workspace workspace) {
+        GraphExporter exporter = (GraphExporter) ec.getExporter("gexf");     //Get GEXF exporter
+        exporter.setExportVisible(true);  //Only exports the visible (filtered) graph
+        exporter.setWorkspace(workspace);
+        try {
+            ec.exportFile(new File("new_io_gexf.gexf"), exporter);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return;
+        }
+    }
+    
+    private void applyLayout(RadialAxisLayout radialAxisLayout, NoverlapLayout noverlabLayout) {
+        radialAxisLayout.initAlgo();
+        while(radialAxisLayout.canAlgo())
+            radialAxisLayout.goAlgo();
+        radialAxisLayout.endAlgo();
+                
+        // Apply NoverlapLayout
+        noverlabLayout.initAlgo();
+        while(noverlabLayout.canAlgo())
+            noverlabLayout.goAlgo();
+        noverlabLayout.endAlgo();
+    }
+    
+    private int findNextEnd(GraphModel graphModel) {
+        Graph filteredGraph = graphModel.getGraphVisible();
+        Edge[] edges = filteredGraph.getEdges().toArray();
+        
+        Integer nextEnd = 0;
+        
+        for(Edge edge : edges) {
+            System.out.println("Edge: "+edge.getSource()+" to: "+edge.getTarget());
+            nextEnd = (Integer) edge.getEdgeData().getAttributes().getValue("endtime");
+        }
+        
+        return nextEnd;
     }
     
     private void createMovie() {

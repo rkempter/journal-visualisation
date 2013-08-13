@@ -38,7 +38,7 @@ public class SettingsWindow extends javax.swing.JFrame {
         
         // Parse dates
         try {
-            min24hDate = sdf.parse("2008-10-31 10:27:00");
+            min24hDate = sdf.parse("2008-10-31 10:00:00");
             max24hDate = sdf.parse("2009-04-28 16:29:00");
             
         } catch (ParseException ex) {
